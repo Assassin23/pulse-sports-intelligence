@@ -14,6 +14,7 @@ from typing import List, Optional
 import httpx
 
 from sports_platform.providers.base import (
+    MatchStatus,
     ProviderAPIError,
     ProviderMatch,
     ProviderMatchEvent,
@@ -36,27 +37,27 @@ class ApiFootballAdapter(SportsDataProvider):
     PROVIDER_NAME = "api_football"
     BASE_URL = "https://api-football-v1.p.rapidapi.com/v3"
 
-    # Map provider status codes → internal status strings
+    # Map provider status codes → internal MatchStatus enum
     STATUS_MAP: dict = {
-        "NS": "scheduled",
-        "TBD": "scheduled",
-        "1H": "live",
-        "2H": "live",
-        "ET": "live",
-        "P": "live",
-        "HT": "half_time",
-        "FT": "completed",
-        "AET": "completed",
-        "PEN": "completed",
-        "BT": "live",
-        "SUSP": "suspended",
-        "INT": "interrupted",
-        "PST": "postponed",
-        "CANC": "cancelled",
-        "ABD": "abandoned",
-        "AWD": "completed",
-        "WO": "completed",
-        "LIVE": "live",
+        "NS": MatchStatus.SCHEDULED,
+        "TBD": MatchStatus.SCHEDULED,
+        "1H": MatchStatus.LIVE,
+        "2H": MatchStatus.LIVE,
+        "ET": MatchStatus.LIVE,
+        "P": MatchStatus.LIVE,
+        "HT": MatchStatus.HALF_TIME,
+        "FT": MatchStatus.COMPLETED,
+        "AET": MatchStatus.COMPLETED,
+        "PEN": MatchStatus.COMPLETED,
+        "BT": MatchStatus.LIVE,
+        "SUSP": MatchStatus.SUSPENDED,
+        "INT": MatchStatus.INTERRUPTED,
+        "PST": MatchStatus.POSTPONED,
+        "CANC": MatchStatus.CANCELLED,
+        "ABD": MatchStatus.ABANDONED,
+        "AWD": MatchStatus.COMPLETED,
+        "WO": MatchStatus.COMPLETED,
+        "LIVE": MatchStatus.LIVE,
     }
 
     # Map provider event types → internal event types

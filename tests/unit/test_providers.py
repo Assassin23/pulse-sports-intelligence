@@ -14,7 +14,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sports_platform.providers.adapters.api_football import ApiFootballAdapter
-from sports_platform.providers.base import ProviderCircuitOpenError
+from sports_platform.providers.base import (
+    MatchStatus,
+    ProviderCircuitOpenError,
+    ProviderMatch,
+    ProviderMatchEvent,
+    ProviderScore,
+)
 from sports_platform.providers.circuit_breaker import CircuitBreaker, CircuitState
 from sports_platform.providers.registry import ProviderRegistry
 
@@ -45,13 +51,13 @@ class TestApiFootballAdapterNormalization:
 
     def test_status_map_covers_common_codes(self):
         adapter = self._make_adapter()
-        assert adapter.STATUS_MAP["NS"] == "scheduled"
-        assert adapter.STATUS_MAP["1H"] == "live"
-        assert adapter.STATUS_MAP["2H"] == "live"
-        assert adapter.STATUS_MAP["HT"] == "half_time"
-        assert adapter.STATUS_MAP["FT"] == "completed"
-        assert adapter.STATUS_MAP["PST"] == "postponed"
-        assert adapter.STATUS_MAP["CANC"] == "cancelled"
+        assert adapter.STATUS_MAP["NS"] == MatchStatus.SCHEDULED
+        assert adapter.STATUS_MAP["1H"] == MatchStatus.LIVE
+        assert adapter.STATUS_MAP["2H"] == MatchStatus.LIVE
+        assert adapter.STATUS_MAP["HT"] == MatchStatus.HALF_TIME
+        assert adapter.STATUS_MAP["FT"] == MatchStatus.COMPLETED
+        assert adapter.STATUS_MAP["PST"] == MatchStatus.POSTPONED
+        assert adapter.STATUS_MAP["CANC"] == MatchStatus.CANCELLED
 
     def test_normalize_fixture_from_cassette(self):
         adapter = self._make_adapter()
@@ -70,7 +76,7 @@ class TestApiFootballAdapterNormalization:
         assert result.home_team_provider_id == "33"
         assert result.away_team_name == "Newcastle"
         assert result.away_team_provider_id == "34"
-        assert result.status == "scheduled"
+        assert result.status == MatchStatus.SCHEDULED
         assert isinstance(result.scheduled_at, datetime)
 
     def test_normalize_multiple_fixtures(self):
@@ -88,6 +94,57 @@ class TestApiFootballAdapterNormalization:
         assert results[1].home_team_name == "Liverpool"
         assert results[1].away_team_name == "Chelsea"
 
+    def test_provider_match_model_dump_excludes_raw(self):
+        """ProviderMatch.model_dump() should exclude raw by default (Kafka-safe)."""
+        adapter = self._make_adapter()
+        cassette = _load_cassette("api_football_upcoming_fixtures")
+        raw_fixture = json.loads(
+            cassette["interactions"][0]["response"]["body"]["string"]
+        )["response"][0]
+        result = adapter._normalize_fixture(raw_fixture)
+        dumped = result.model_dump()
+        assert "raw" not in dumped  # excluded by default
+        assert dumped["provider_match_id"] == "1208082"
+        assert dumped["status"] == MatchStatus.SCHEDULED
+
+    def test_provider_match_model_dump_json_is_valid_json(self):
+        """model_dump_json() produces valid JSON — ready for Kafka message value."""
+        adapter = self._make_adapter()
+        cassette = _load_cassette("api_football_upcoming_fixtures")
+        raw_fixture = json.loads(
+            cassette["interactions"][0]["response"]["body"]["string"]
+        )["response"][0]
+        result = adapter._normalize_fixture(raw_fixture)
+        json_str = result.model_dump_json()
+        parsed = json.loads(json_str)
+        assert parsed["provider_match_id"] == "1208082"
+        assert parsed["sport"] == "football"
+
+    def test_provider_match_model_validate_roundtrip(self):
+        """model_validate(model_dump()) round-trips cleanly — Kafka consumer pattern."""
+        adapter = self._make_adapter()
+        cassette = _load_cassette("api_football_upcoming_fixtures")
+        raw_fixture = json.loads(
+            cassette["interactions"][0]["response"]["body"]["string"]
+        )["response"][0]
+        original = adapter._normalize_fixture(raw_fixture)
+        dumped = original.model_dump()
+        reconstructed = ProviderMatch.model_validate(dumped)
+        assert reconstructed.provider_match_id == original.provider_match_id
+        assert reconstructed.status == original.status
+        assert reconstructed.scheduled_at == original.scheduled_at
+
+    def test_provider_match_is_immutable(self):
+        """frozen=True: mutating a ProviderMatch should raise."""
+        adapter = self._make_adapter()
+        cassette = _load_cassette("api_football_upcoming_fixtures")
+        raw_fixture = json.loads(
+            cassette["interactions"][0]["response"]["body"]["string"]
+        )["response"][0]
+        result = adapter._normalize_fixture(raw_fixture)
+        with pytest.raises(Exception):  # Pydantic raises ValidationError on frozen models
+            result.status = MatchStatus.LIVE  # type: ignore[misc]
+
     def test_fetch_upcoming_fixtures_uses_cassette(self):
         """Test the adapter via mocked HTTP using cassette body."""
         adapter = self._make_adapter()
@@ -102,7 +159,7 @@ class TestApiFootballAdapterNormalization:
             fixtures = adapter.fetch_upcoming_fixtures("football", days_ahead=3)
 
         assert len(fixtures) == 2
-        assert fixtures[0].status == "scheduled"
+        assert fixtures[0].status == MatchStatus.SCHEDULED
         assert fixtures[0].competition_name == "Premier League"
 
     def test_normalize_events_from_cassette(self):
