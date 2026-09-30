@@ -1,0 +1,3 @@
+"""
+Sports management package.
+"""

@@ -1,0 +1,70 @@
+version: "3.9"
+
+x-common-env: &common-env
+  DATABASE_URL: postgresql://sports:sports@postgres:5432/sports_db
+  REDIS_URL: redis://redis:6379/0
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  DJANGO_SETTINGS_MODULE: sports_platform.settings.local
+  SECRET_KEY: local-dev-secret-key-not-for-prod
+  DEBUG: "true"
+
+x-django-base: &django-base
+  build:
+    context: .
+    dockerfile: docker/api/Dockerfile
+  volumes:
+    - .:/app
+  environment:
+    <<: *common-env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  # ─── Core Infrastructure ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sports_db
+      POSTGRES_USER: sports
+      POSTGRES_PASSWORD: sports
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sports -d sports_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Application Services ─────────────────────────────────────────────
+  api:
+    <<: *django-base
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py seed_sports &&
+             python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "sports-intelligence-platform"
+version = "0.1.0"
+description = "Production-grade personalized real-time sports intelligence platform"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T20"]
+ignore = ["E501", "B008", "A003"]
+exclude = ["migrations", "__pycache__", ".venv"]
+
+[tool.ruff.isort]
+known-first-party = ["sports_platform"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+exclude = '''/(migrations|\.venv)/'''
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+strict = false
+exclude = ["migrations/"]
+
+[tool.django-stubs]
+django_settings_module = "sports_platform.settings.local"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "sports_platform.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "unit: Pure unit tests (no external dependencies)",
+    "integration: Tests requiring database / Redis / Kafka",
+    "slow: Long-running tests",
+]
+
+[tool.coverage.run]
+source = ["sports_platform"]
+omit = ["*/migrations/*", "*/tests/*", "*/conftest.py", "manage.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
