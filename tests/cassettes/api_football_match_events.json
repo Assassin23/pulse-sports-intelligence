@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "uri": "https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture=1208082",
+        "body": null,
+        "headers": {}
+      },
+      "response": {
+        "status": {"code": 200, "message": "OK"},
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {
+          "string": "{\"get\":\"fixtures/events\",\"parameters\":{\"fixture\":\"1208082\"},\"errors\":[],\"results\":3,\"paging\":{\"current\":1,\"total\":1},\"response\":[{\"time\":{\"elapsed\":23,\"extra\":null},\"team\":{\"id\":33,\"name\":\"Manchester United\"},\"player\":{\"id\":606,\"name\":\"Marcus Rashford\"},\"assist\":{\"id\":null,\"name\":null},\"type\":\"Goal\",\"detail\":\"Normal Goal\",\"comments\":null},{\"time\":{\"elapsed\":45,\"extra\":null},\"team\":{\"id\":34,\"name\":\"Newcastle\"},\"player\":{\"id\":909,\"name\":\"Alexander Isak\"},\"assist\":{\"id\":888,\"name\":\"Bruno Guimaraes\"},\"type\":\"Goal\",\"detail\":\"Normal Goal\",\"comments\":null},{\"time\":{\"elapsed\":78,\"extra\":null},\"team\":{\"id\":33,\"name\":\"Manchester United\"},\"player\":{\"id\":610,\"name\":\"Kobbie Mainoo\"},\"assist\":{\"id\":null,\"name\":null},\"type\":\"Card\",\"detail\":\"Yellow Card\",\"comments\":null}]}"
+        }
+      }
+    }
+  ]
+}

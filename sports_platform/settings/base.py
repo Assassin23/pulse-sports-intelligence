@@ -44,6 +44,7 @@ LOCAL_APPS = [
     "sports_platform.users",
     "sports_platform.sports",
     "sports_platform.preferences",
+    "sports_platform.providers",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -186,6 +187,10 @@ CORS_ALLOWED_ORIGINS = env.list(
     default=["http://localhost:3000", "http://localhost:5173"],
 )
 CORS_ALLOW_CREDENTIALS = True
+
+# ─── External Providers ─────────────────────────────────────────────────────
+# Sports data providers — keys loaded from environment
+API_FOOTBALL_KEY = env("API_FOOTBALL_KEY", default="")
 
 # ─── Celery ───────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/1")

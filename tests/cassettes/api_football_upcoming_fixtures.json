@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "uri": "https://api-football-v1.p.rapidapi.com/v3/fixtures?next=30",
+        "body": null,
+        "headers": {}
+      },
+      "response": {
+        "status": {"code": 200, "message": "OK"},
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {
+          "string": "{\"get\":\"fixtures\",\"parameters\":{\"next\":\"30\"},\"errors\":[],\"results\":2,\"paging\":{\"current\":1,\"total\":1},\"response\":[{\"fixture\":{\"id\":1208082,\"referee\":null,\"timezone\":\"UTC\",\"date\":\"2026-10-05T14:00:00+00:00\",\"timestamp\":1759579200,\"status\":{\"long\":\"Not Started\",\"short\":\"NS\",\"elapsed\":null}},\"league\":{\"id\":39,\"name\":\"Premier League\",\"country\":\"England\",\"season\":2025,\"round\":\"Regular Season - 8\"},\"teams\":{\"home\":{\"id\":33,\"name\":\"Manchester United\",\"logo\":\"https://media.api-sports.io/football/teams/33.png\"},\"away\":{\"id\":34,\"name\":\"Newcastle\",\"logo\":\"https://media.api-sports.io/football/teams/34.png\"}},\"goals\":{\"home\":null,\"away\":null},\"score\":{\"halftime\":{\"home\":null,\"away\":null},\"fulltime\":{\"home\":null,\"away\":null},\"extratime\":{\"home\":null,\"away\":null},\"penalty\":{\"home\":null,\"away\":null}}},{\"fixture\":{\"id\":1208083,\"referee\":null,\"timezone\":\"UTC\",\"date\":\"2026-10-05T16:30:00+00:00\",\"timestamp\":1759588200,\"status\":{\"long\":\"Not Started\",\"short\":\"NS\",\"elapsed\":null}},\"league\":{\"id\":39,\"name\":\"Premier League\",\"country\":\"England\",\"season\":2025,\"round\":\"Regular Season - 8\"},\"teams\":{\"home\":{\"id\":40,\"name\":\"Liverpool\",\"logo\":\"https://media.api-sports.io/football/teams/40.png\"},\"away\":{\"id\":49,\"name\":\"Chelsea\",\"logo\":\"https://media.api-sports.io/football/teams/49.png\"}},\"goals\":{\"home\":null,\"away\":null},\"score\":{\"halftime\":{\"home\":null,\"away\":null},\"fulltime\":{\"home\":null,\"away\":null},\"extratime\":{\"home\":null,\"away\":null},\"penalty\":{\"home\":null,\"away\":null}}}]}"
+        }
+      }
+    }
+  ]
+}
