@@ -73,3 +73,30 @@ class PlayerFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: f"Player {n}")
     position = "Forward"
     is_active = True
+
+
+class MatchFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "matches.Match"
+
+    sport = factory.SubFactory(SportFactory)
+    competition = factory.SubFactory(CompetitionFactory, sport=factory.SelfAttribute("..sport"))
+    home_team = factory.SubFactory(TeamFactory, sport=factory.SelfAttribute("..sport"))
+    away_team = factory.SubFactory(TeamFactory, sport=factory.SelfAttribute("..sport"))
+    scheduled_at = factory.LazyFunction(
+        lambda: __import__("django.utils.timezone", fromlist=["now"]).now()
+    )
+    status = "scheduled"
+    source_provider = "test_provider"
+    provider_match_id = factory.Sequence(lambda n: f"match-{n}")
+
+
+class MatchEventFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "matches.MatchEvent"
+
+    match = factory.SubFactory(MatchFactory)
+    sport = factory.SubFactory(SportFactory)
+    event_type = "goal"
+    event_sequence = factory.Sequence(lambda n: n)
+    source_provider = "test_provider"

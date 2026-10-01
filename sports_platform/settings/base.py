@@ -45,6 +45,9 @@ LOCAL_APPS = [
     "sports_platform.sports",
     "sports_platform.preferences",
     "sports_platform.providers",
+    "sports_platform.matches",
+    "sports_platform.kafka",
+    "sports_platform.ingestion",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -191,6 +194,9 @@ CORS_ALLOW_CREDENTIALS = True
 # ─── External Providers ─────────────────────────────────────────────────────
 # Sports data providers — keys loaded from environment
 API_FOOTBALL_KEY = env("API_FOOTBALL_KEY", default="")
+
+# ─── Kafka ───────────────────────────────────────────────────────────────────
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092")
 
 # ─── Celery ───────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/1")

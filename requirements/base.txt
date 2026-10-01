@@ -22,6 +22,9 @@ django-celery-results==2.5.1
 # HTTP Client
 httpx==0.27.2
 
+# Kafka
+kafka-python==2.0.2
+
 # Serialization
 pydantic==2.9.2
 
