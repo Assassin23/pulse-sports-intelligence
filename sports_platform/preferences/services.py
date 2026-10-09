@@ -2,6 +2,7 @@
 Preferences service layer.
 Enforces the max-3-sports rule, entity validation, and builds aggregated preference representations.
 """
+import logging
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -15,6 +16,8 @@ from sports_platform.preferences.models import (
     UserSportPreference,
 )
 from sports_platform.sports.models import Competition, Country, Player, Sport, Team
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 MAX_SPORTS = 3
@@ -190,6 +193,14 @@ class PreferenceService:
             )
 
         entity_name = getattr(entity_obj, "name", str(entity_id))
+        cls._publish_preference_change(
+            user=user,
+            change_type="follow",
+            changed_sports=[sport.slug],
+            entity_type=entity_type,
+            entity_id=entity_id,
+            sport=sport.slug,
+        )
         return {"message": f"Now following {entity_name} in {sport.name}."}
 
     @classmethod
@@ -204,6 +215,13 @@ class PreferenceService:
         ).delete()
         if deleted_count == 0:
             raise NotFound(detail=f"Follow relation for {entity_type} {entity_id} not found.")
+
+        cls._publish_preference_change(
+            user=user,
+            change_type="unfollow",
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
 
     @classmethod
     def bulk_update_preferences(
@@ -255,4 +273,43 @@ class PreferenceService:
                     entity_id=e_id,
                 )
 
+        cls._publish_preference_change(
+            user=user,
+            change_type="bulk_update",
+            changed_sports=sports_slugs,
+        )
+
         return cls.get_user_preferences(user)
+
+    @classmethod
+    def _publish_preference_change(
+        cls,
+        user: Any,
+        change_type: str,
+        changed_sports: Optional[List[str]] = None,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[uuid.UUID] = None,
+        sport: Optional[str] = None,
+    ) -> None:
+        user_id_str = str(user.id)
+        # 1. Invalidate local / redis feed cache directly (fast path)
+        try:
+            from sports_platform.feed.services import FeedService
+            FeedService.invalidate_feed_cache(user_id_str)
+        except Exception as exc:
+            logger.warning("Direct feed cache invalidation failed", extra={"error": str(exc), "user_id": user_id_str})
+
+        # 2. Publish sports.user.preference.updated event to Kafka
+        try:
+            from sports_platform.kafka.producer import get_producer
+            producer = get_producer()
+            producer.publish_preference_updated(
+                user_id=user_id_str,
+                changed_sports=changed_sports or [],
+                change_type=change_type,
+                entity_type=entity_type,
+                entity_id=str(entity_id) if entity_id else None,
+                sport=sport,
+            )
+        except Exception as exc:
+            logger.warning("Kafka preference event publish skipped or failed", extra={"error": str(exc), "user_id": user_id_str})

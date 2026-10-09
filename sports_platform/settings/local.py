@@ -36,3 +36,9 @@ REST_FRAMEWORK = {  # noqa: F405
     **REST_FRAMEWORK,  # noqa: F405
     "DEFAULT_THROTTLE_CLASSES": [],
 }
+
+# ─── CORS in local dev ────────────────────────────────────────────────────────
+# Allow any localhost or 127.0.0.1 port (e.g. 5173, 8081, 3000)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+]

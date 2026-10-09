@@ -193,6 +193,10 @@ class UserPreferenceUpdatedEvent(KafkaEvent):
 
     user_id: str
     changed_sports: list = Field(default_factory=list)
+    change_type: Optional[str] = None  # "bulk_update", "follow", "unfollow"
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    sport: Optional[str] = None
 
 
 # ── Kafka Topic Names ─────────────────────────────────────────────────────────

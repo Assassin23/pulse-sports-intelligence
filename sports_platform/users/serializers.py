@@ -26,6 +26,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     )
     password_confirm = serializers.CharField(
         write_only=True,
+        required=False,
         style={"input_type": "password"},
         help_text="Must match password.",
     )
@@ -53,7 +54,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return username
 
     def validate(self, attrs: dict) -> dict:
-        if attrs["password"] != attrs.pop("password_confirm"):
+        password_confirm = attrs.pop("password_confirm", None)
+        if password_confirm is not None and attrs["password"] != password_confirm:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
         return attrs
 
@@ -126,6 +128,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs: dict) -> dict:
         data = super().validate(attrs)
-        # Include user profile in the login response
-        data["user"] = UserProfileSerializer(self.user).data
+        # Include user profile and tokens object in the login response
+        user_data = UserProfileSerializer(self.user).data
+        data["user"] = user_data
+        data["tokens"] = {
+            "access": data["access"],
+            "refresh": data["refresh"],
+        }
         return data

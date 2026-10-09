@@ -88,7 +88,7 @@ class LogoutView(APIView):
     Access tokens expire naturally (15 min TTL).
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
         refresh_token = request.data.get("refresh")

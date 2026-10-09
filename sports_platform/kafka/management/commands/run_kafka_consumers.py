@@ -21,6 +21,8 @@ CONSUMER_MAP = {
     "match": "sports_platform.kafka.consumers.match_consumers.MatchProcessorConsumer",
     "score": "sports_platform.kafka.consumers.match_consumers.ScoreProcessorConsumer",
     "event": "sports_platform.kafka.consumers.match_consumers.EventProcessorConsumer",
+    "feed": "sports_platform.kafka.consumers.feed_consumers.FeedInvalidationConsumer",
+    "feed_invalidation": "sports_platform.kafka.consumers.feed_consumers.FeedInvalidationConsumer",
 }
 
 

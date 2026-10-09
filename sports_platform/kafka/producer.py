@@ -144,10 +144,22 @@ class KafkaEventProducer:
         )
         self.publish(KafkaTopics.MATCH_EVENT, event)
 
-    def publish_preference_updated(self, user_id: str, changed_sports: list) -> None:
+    def publish_preference_updated(
+        self,
+        user_id: str,
+        changed_sports: Optional[list] = None,
+        change_type: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        sport: Optional[str] = None,
+    ) -> None:
         event = UserPreferenceUpdatedEvent(
             user_id=user_id,
-            changed_sports=changed_sports,
+            changed_sports=changed_sports or [],
+            change_type=change_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            sport=sport,
         )
         self.publish(KafkaTopics.USER_PREFERENCE_UPDATED, event)
 

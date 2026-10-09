@@ -115,6 +115,18 @@ class MatchRedisStore:
                 "Score updated in Redis",
                 extra={"match_id": match_id, "sequence": sequence_number},
             )
+            try:
+                pub_payload = json.dumps({
+                    "type": "score_updated",
+                    "match_id": str(match_id),
+                    "score_data": score_data,
+                    "sequence_number": sequence_number,
+                    "status": status,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
+                self._redis.publish(f"ws:match:{match_id}", pub_payload)
+            except Exception as exc:
+                logger.warning("Failed to publish score to Redis PubSub", extra={"error": str(exc)})
         else:
             logger.debug(
                 "Score update skipped (stale sequence)",
@@ -164,6 +176,7 @@ class MatchRedisStore:
         """
         Add event to recent events sorted set (score = event_sequence).
         Trim to RECENT_EVENTS_LIMIT most recent entries.
+        Publish to ws:match:{match_id} for live WebSocket fan-out.
         """
         key = self.events_key(match_id)
         pipe = self._redis.pipeline()
@@ -171,6 +184,18 @@ class MatchRedisStore:
         pipe.zremrangebyrank(key, 0, -(RECENT_EVENTS_LIMIT + 1))
         pipe.expire(key, EVENTS_TTL)
         pipe.execute()
+
+        try:
+            pub_payload = json.dumps({
+                "type": "match_event",
+                "match_id": str(match_id),
+                "event": event_payload,
+                "sequence_number": event_sequence,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            self._redis.publish(f"ws:match:{match_id}", pub_payload)
+        except Exception as exc:
+            logger.warning("Failed to publish event to Redis PubSub", extra={"error": str(exc)})
 
     def get_recent_events(self, match_id: str, limit: int = 20) -> List[dict]:
         """Return up to `limit` most recent events for a match."""

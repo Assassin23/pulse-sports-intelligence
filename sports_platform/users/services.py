@@ -90,6 +90,21 @@ class AuthService:
             return False
 
     @staticmethod
+    def is_token_revoked(refresh_token_str: str) -> bool:
+        """Check if a refresh token has been revoked in DB or blacklist."""
+        try:
+            token = RefreshToken(refresh_token_str)
+            jti = str(token["jti"])
+            jti_hash = _hash_jti(jti)
+            record = RefreshTokenRecord.objects.filter(jti_hash=jti_hash).first()
+            if record and record.revoked_at is not None:
+                return True
+            from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+            return BlacklistedToken.objects.filter(token__jti=jti).exists()
+        except Exception:
+            return True
+
+    @staticmethod
     def update_last_login(user: User):
         """Update the user's last login timestamp."""
         user.last_login_at = timezone.now()

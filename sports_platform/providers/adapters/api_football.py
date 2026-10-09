@@ -173,7 +173,7 @@ class ApiFootballAdapter(SportsDataProvider):
         data = self._get("/fixtures/events", params={"fixture": provider_match_id})
         events = data.get("response", [])
         normalized = []
-        for i, ev in enumerate(events):
+        for i, ev in enumerate(events, start=1):
             event_type = ev.get("type", "")
             detail = ev.get("detail", "")
 

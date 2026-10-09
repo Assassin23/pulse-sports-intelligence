@@ -16,7 +16,7 @@ Endpoints:
 import uuid
 
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,7 +37,7 @@ from sports_platform.sports.serializers import (
 class SportListView(APIView):
     """GET /api/v1/sports/ — list all active sports."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         sports = Sport.objects.filter(is_active=True).order_by("name")
@@ -47,7 +47,7 @@ class SportListView(APIView):
 class SportDetailView(APIView):
     """GET /api/v1/sports/{slug}/ — single sport detail."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, slug: str) -> Response:
         sport = get_object_or_404(Sport, slug=slug, is_active=True)
@@ -57,7 +57,7 @@ class SportDetailView(APIView):
 class CountryListView(APIView):
     """GET /api/v1/sports/countries/ — list all countries."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         q = request.query_params.get("q", "").strip()
@@ -73,7 +73,7 @@ class TeamListView(APIView):
     Query params: q (name), country (iso_code), type (club/national)
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, slug: str) -> Response:
         sport = get_object_or_404(Sport, slug=slug, is_active=True)
@@ -102,7 +102,7 @@ class TeamListView(APIView):
 class TeamDetailView(APIView):
     """GET /api/v1/sports/teams/{id}/ — single team."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, id: uuid.UUID) -> Response:
         team = get_object_or_404(Team, id=id, is_active=True)
@@ -115,7 +115,7 @@ class CompetitionListView(APIView):
     Query params: q (name), country (iso_code), season, type (league/cup/international)
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, slug: str) -> Response:
         sport = get_object_or_404(Sport, slug=slug, is_active=True)
@@ -148,7 +148,7 @@ class CompetitionListView(APIView):
 class CompetitionDetailView(APIView):
     """GET /api/v1/sports/competitions/{id}/ — single competition."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, id: uuid.UUID) -> Response:
         comp = get_object_or_404(Competition, id=id, is_active=True)
@@ -161,7 +161,7 @@ class PlayerListView(APIView):
     Query params: q (name), nationality (iso_code), position
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, slug: str) -> Response:
         sport = get_object_or_404(Sport, slug=slug, is_active=True)
@@ -190,7 +190,7 @@ class PlayerListView(APIView):
 class PlayerDetailView(APIView):
     """GET /api/v1/sports/players/{id}/ — single player."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, id: uuid.UUID) -> Response:
         player = get_object_or_404(Player, id=id, is_active=True)

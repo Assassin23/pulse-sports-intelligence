@@ -48,6 +48,7 @@ LOCAL_APPS = [
     "sports_platform.matches",
     "sports_platform.kafka",
     "sports_platform.ingestion",
+    "sports_platform.feed",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -187,7 +188,12 @@ SIMPLE_JWT = {
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:3000", "http://localhost:5173"],
+    default=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+    ],
 )
 CORS_ALLOW_CREDENTIALS = True
 

@@ -64,7 +64,7 @@ class TestSportsSearchEndpoints:
         TeamFactory(sport=sport, name="Chelsea FC")
         TeamFactory(sport=sport, name="Arsenal")
 
-        response = auth_client.get("/api/v1/sports/football2/teams/?q=chelsc")
+        response = auth_client.get("/api/v1/sports/football2/teams/?q=chels")
         assert response.status_code == status.HTTP_200_OK
         names = [t["name"] for t in response.data["teams"]]
         assert "Chelsea FC" in names

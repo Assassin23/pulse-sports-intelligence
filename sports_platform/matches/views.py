@@ -12,7 +12,7 @@ import time
 from datetime import datetime, timezone
 
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,7 +32,7 @@ class UpcomingMatchesView(APIView):
     """
     GET /api/v1/matches/upcoming/
     Query params:
-      sport   — filter by sport slug (required)
+      sport   — filter by sport slug (optional)
       limit   — max results (default 20)
       hours   — look-ahead window in hours (default 48)
 
@@ -40,17 +40,25 @@ class UpcomingMatchesView(APIView):
     Fallback:  PostgreSQL query (if Redis unavailable or empty)
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         sport_slug = request.query_params.get("sport", "").strip()
-        if not sport_slug:
-            return Response(
-                {"error": "sport query parameter is required"}, status=400
-            )
-
         limit = min(int(request.query_params.get("limit", 20)), 50)
         hours = int(request.query_params.get("hours", 48))
+
+        if not sport_slug:
+            # Return upcoming matches across all sports
+            qs = Match.objects.filter(status="scheduled").select_related(
+                "sport", "competition", "home_team", "away_team"
+            ).order_by("scheduled_at")[:limit]
+            data = MatchListSerializer(qs, many=True).data
+            return Response({
+                "sport": "all",
+                "source": "db",
+                "matches": data,
+                "count": len(data),
+            })
         now = time.time()
         until = now + (hours * 3600)
 
@@ -110,7 +118,7 @@ class LiveMatchesView(APIView):
       sport — optional filter by sport slug
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         sport_filter = request.query_params.get("sport", "").strip()
@@ -177,7 +185,7 @@ class MatchDetailView(APIView):
       - data_freshness_seconds: age of score data in seconds
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, id: str) -> Response:
         match = get_object_or_404(
@@ -225,7 +233,7 @@ class MatchEventsView(APIView):
     Query params: page, page_size (default 50), event_type (filter)
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request: Request, id: str) -> Response:
         match = get_object_or_404(Match, id=id)
