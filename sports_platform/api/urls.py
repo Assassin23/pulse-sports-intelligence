@@ -12,4 +12,6 @@ urlpatterns = [
     path("sports/", include("sports_platform.sports.urls", namespace="sports")),
     path("matches/", include("sports_platform.matches.urls", namespace="matches")),
     path("feed/", include("sports_platform.feed.urls", namespace="feed")),
+    path("rag/", include("sports_platform.rag.urls", namespace="rag")),
+    path("admin/rag/", include("sports_platform.rag.urls_admin", namespace="admin-rag")),
 ]

@@ -44,6 +44,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
 ]
 
 THIRD_PARTY_APPS = [
@@ -66,6 +67,7 @@ LOCAL_APPS = [
     "sports_platform.kafka",
     "sports_platform.ingestion",
     "sports_platform.feed",
+    "sports_platform.rag",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -259,5 +261,15 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
         "sports_platform": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "sports_platform.rag": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
+
+# ─── AI & RAG Configuration ───────────────────────────────────────────────────
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_EMBEDDING_MODEL = env("OPENAI_EMBEDDING_MODEL", default="text-embedding-3-small")
+COHERE_API_KEY = env("COHERE_API_KEY", default="")
+RAG_TOP_K_CANDIDATES = env.int("RAG_TOP_K_CANDIDATES", default=20)
+RAG_TOP_N_FINAL = env.int("RAG_TOP_N_FINAL", default=5)
+RAG_FRESHNESS_BOOST_DAYS = env.int("RAG_FRESHNESS_BOOST_DAYS", default=30)
+RAG_FRESHNESS_BOOST_SCORE = env.float("RAG_FRESHNESS_BOOST_SCORE", default=0.05)
