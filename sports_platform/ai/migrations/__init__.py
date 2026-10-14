@@ -1,0 +1,3 @@
+"""
+AI migrations package.
+"""

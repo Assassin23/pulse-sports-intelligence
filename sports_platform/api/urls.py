@@ -14,4 +14,5 @@ urlpatterns = [
     path("feed/", include("sports_platform.feed.urls", namespace="feed")),
     path("rag/", include("sports_platform.rag.urls", namespace="rag")),
     path("admin/rag/", include("sports_platform.rag.urls_admin", namespace="admin-rag")),
+    path("ai/", include("sports_platform.ai.urls", namespace="ai")),
 ]
