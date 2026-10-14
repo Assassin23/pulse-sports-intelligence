@@ -118,3 +118,87 @@ class UserNotificationPreference(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} - {self.sport.slug} - {self.notification_type}: {self.is_enabled}"
+
+
+class UserConsoleSession(models.Model):
+    """
+    Persisted state of user's active Command Console (Milestone 8).
+    Allows pinning at most 3 live/followed matches in an interactive circular/triangular
+    command center, with switching and rotation state saved across user sessions.
+    """
+
+    CONSOLE_MODES = [
+        ("circular", "Circular Dial"),
+        ("triangular", "Triangular Hub"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="console_session",
+    )
+    pinned_matches = models.JSONField(
+        default=list,
+        help_text="Ordered list of up to 4 match UUID strings pinned to console slots.",
+    )
+    active_match_id = models.CharField(max_length=64, blank=True, default="")
+    console_mode = models.CharField(max_length=20, choices=CONSOLE_MODES, default="circular")
+    rotation_angle = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_console_sessions"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if len(self.pinned_matches) > 4:
+            raise ValidationError("A maximum of 4 matches can be pinned to the command console.")
+
+    def __str__(self) -> str:
+        return f"Console Session ({self.user.username}): {len(self.pinned_matches)} pinned"
+
+
+class NotificationLog(models.Model):
+    """
+    Log of delivered and queued notifications for a user (Milestone 8).
+    Supports alerts for events occurring in background matches (outside active console).
+    """
+
+    NOTIFICATION_CHANNELS = [
+        ("websocket", "WebSocket"),
+        ("push", "Push"),
+        ("both", "Both"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_logs",
+    )
+    match = models.ForeignKey(
+        "matches.Match",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notification_logs",
+    )
+    notification_type = models.CharField(max_length=50, db_index=True)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    data = models.JSONField(default=dict)
+    channel = models.CharField(max_length=20, choices=NOTIFICATION_CHANNELS, default="websocket")
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "notification_log"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Notif for {self.user}: {self.title} ({self.notification_type})"

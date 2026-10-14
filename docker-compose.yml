@@ -1,4 +1,5 @@
 x-common-env: &common-env
+  IN_DOCKER: "true"
   DATABASE_URL: postgresql://sports:sports@postgres:5432/sports_db
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
@@ -108,8 +109,8 @@ services:
       kafka:
         condition: service_healthy
 
-  # ─── Application Services ────────────────────────────────────────────────
-  api:
+  # ─── Database Migration & Setup ──────────────────────────────────────────
+  migrate:
     <<: *django-base
     command: >
       sh -c "python manage.py wait_for_db &&
@@ -117,34 +118,69 @@ services:
              python manage.py migrate &&
              python manage.py create_kafka_topics &&
              python manage.py seed_sports &&
-             python manage.py seed_matches &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py seed_matches"
+    restart: "no"
+
+  # ─── Application Services ────────────────────────────────────────────────
+  api:
+    <<: *django-base
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # ─── Kafka Consumers ─────────────────────────────────────────────────────
   kafka-consumers:
     <<: *django-base
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             python manage.py run_kafka_consumers"
+    command: python manage.py run_kafka_consumers
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # ─── Celery Worker (ingestion tasks) ─────────────────────────────────────
   celery-worker:
     <<: *django-base
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             celery -A sports_platform worker -l INFO -Q ingestion,default"
+    command: celery -A sports_platform worker -l INFO -Q ingestion,default
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # ─── Celery Beat (scheduler) ─────────────────────────────────────────────
   celery-beat:
     <<: *django-base
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             celery -A sports_platform beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    command: celery -A sports_platform beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # ─── WebSocket Gateway (FastAPI Microservice) ────────────────────────────
   ws-gateway:

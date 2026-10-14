@@ -1,6 +1,7 @@
 """
 Base Django settings shared across all environments.
 """
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -14,8 +15,24 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
 )
 
+# Detect if running inside a Docker container
+IS_CONTAINER = (
+    os.environ.get("IN_DOCKER") == "true"
+    or Path("/.dockerenv").exists()
+    or bool(os.environ.get("KUBERNETES_SERVICE_HOST"))
+)
+
+# Load .env file if it exists
+# In Docker: do NOT overwrite container network hostnames (e.g. postgres, redis, kafka)
+# On host: overwrite=True to prevent unrelated system environment variables from interfering
+env_file = BASE_DIR / ".env"
+if env_file.exists():
+    environ.Env.read_env(str(env_file), overwrite=(not IS_CONTAINER))
+elif (BASE_DIR / ".env.example").exists():
+    environ.Env.read_env(str(BASE_DIR / ".env.example"), overwrite=(not IS_CONTAINER))
+
 # ─── Security ─────────────────────────────────────────────────────────────────
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = env("SECRET_KEY", default="django-insecure-pulse-local-dev-key-change-in-prod-1234567890")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 

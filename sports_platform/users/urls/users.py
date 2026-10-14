@@ -7,9 +7,14 @@ from sports_platform.users.views.user_views import (
     MeView,
 )
 from sports_platform.preferences.views import (
-    UserPreferencesView,
     FollowEntityView,
+    MarkAllNotificationsReadView,
+    MarkNotificationReadView,
+    TriggerTestNotificationView,
     UnfollowEntityView,
+    UserConsoleSessionView,
+    UserNotificationsView,
+    UserPreferencesView,
 )
 
 app_name = "users"
@@ -25,5 +30,24 @@ urlpatterns = [
         "me/preferences/follow/<str:entity_type>/<uuid:entity_id>/",
         UnfollowEntityView.as_view(),
         name="unfollow",
+    ),
+    # User Console Session (Milestone 8)
+    path("me/console/", UserConsoleSessionView.as_view(), name="console-session"),
+    # Notifications (Milestone 8)
+    path("me/notifications/", UserNotificationsView.as_view(), name="notifications"),
+    path(
+        "me/notifications/<uuid:id>/read/",
+        MarkNotificationReadView.as_view(),
+        name="notification-read",
+    ),
+    path(
+        "me/notifications/mark-all-read/",
+        MarkAllNotificationsReadView.as_view(),
+        name="notifications-mark-all-read",
+    ),
+    path(
+        "me/notifications/test-event/",
+        TriggerTestNotificationView.as_view(),
+        name="notification-test-event",
     ),
 ]

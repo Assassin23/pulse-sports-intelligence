@@ -3,7 +3,14 @@ Sports reference data serializers.
 """
 from rest_framework import serializers
 
-from sports_platform.sports.models import Competition, Country, Player, Sport, Team
+from sports_platform.sports.models import (
+    Competition,
+    CompetitionTeam,
+    Country,
+    Player,
+    Sport,
+    Team,
+)
 
 
 class SportSerializer(serializers.ModelSerializer):
@@ -62,6 +69,14 @@ class CompetitionDetailSerializer(serializers.ModelSerializer):
             "id", "name", "short_name", "logo_url",
             "competition_type", "season", "country", "sport", "created_at",
         ]
+
+
+class CompetitionTeamSerializer(serializers.ModelSerializer):
+    team = TeamListSerializer(read_only=True)
+
+    class Meta:
+        model = CompetitionTeam
+        fields = ["id", "season", "team", "is_active"]
 
 
 # ── Player Serializers ────────────────────────────────────────────────────────

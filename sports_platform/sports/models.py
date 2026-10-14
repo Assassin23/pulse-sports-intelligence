@@ -65,6 +65,12 @@ class Competition(models.Model):
     logo_url = models.URLField(max_length=500, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    teams = models.ManyToManyField(
+        "Team",
+        through="CompetitionTeam",
+        related_name="competitions",
+        blank=True,
+    )
 
     class Meta:
         db_table = "competitions"
@@ -109,6 +115,35 @@ class Team(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class CompetitionTeam(models.Model):
+    """
+    Associates a team with a competition for a specific season/campaign.
+    Enables instant lookup of all teams participating in a tournament or league.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    competition = models.ForeignKey(
+        Competition, on_delete=models.CASCADE, related_name="competition_teams"
+    )
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="competition_teams"
+    )
+    season = models.CharField(max_length=20, default="2025-26", blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "competition_teams"
+        unique_together = [("competition", "team", "season")]
+        indexes = [
+            models.Index(fields=["competition", "is_active"], name="idx_comp_teams_lookup"),
+            models.Index(fields=["team", "is_active"], name="idx_team_comps_lookup"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.team.name} in {self.competition.name} ({self.season})"
 
 
 class Player(models.Model):

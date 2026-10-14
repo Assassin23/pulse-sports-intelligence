@@ -51,3 +51,51 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
             "channel_push",
             "updated_at",
         ]
+
+
+class UserConsoleSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        from sports_platform.preferences.models import UserConsoleSession
+        model = UserConsoleSession
+        fields = [
+            "pinned_matches",
+            "active_match_id",
+            "console_mode",
+            "rotation_angle",
+            "updated_at",
+        ]
+
+
+class UpdateUserConsoleSessionSerializer(serializers.Serializer):
+    pinned_matches = serializers.ListField(
+        child=serializers.CharField(max_length=64),
+        max_length=4,
+        required=False,
+    )
+    active_match_id = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    console_mode = serializers.CharField(max_length=30, required=False)
+    rotation_angle = serializers.IntegerField(required=False)
+
+    def validate_pinned_matches(self, value):
+        if len(value) > 4:
+            raise serializers.ValidationError("At most 4 matches can be pinned to the console.")
+        return value
+
+
+class NotificationLogSerializer(serializers.ModelSerializer):
+    match_id = serializers.CharField(source="match.id", read_only=True, default=None)
+
+    class Meta:
+        from sports_platform.preferences.models import NotificationLog
+        model = NotificationLog
+        fields = [
+            "id",
+            "match_id",
+            "notification_type",
+            "title",
+            "message",
+            "data",
+            "channel",
+            "is_read",
+            "created_at",
+        ]

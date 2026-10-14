@@ -5,6 +5,7 @@ from django.contrib import admin
 
 from sports_platform.sports.models import (
     Competition,
+    CompetitionTeam,
     Country,
     Player,
     ProviderEntityMapping,
@@ -38,6 +39,13 @@ class TeamAdmin(admin.ModelAdmin):
     list_display = ["name", "sport", "country", "team_type", "is_active"]
     list_filter = ["sport", "team_type", "is_active"]
     search_fields = ["name", "short_name"]
+
+
+@admin.register(CompetitionTeam)
+class CompetitionTeamAdmin(admin.ModelAdmin):
+    list_display = ["competition", "team", "season", "is_active"]
+    list_filter = ["competition", "season", "is_active"]
+    search_fields = ["competition__name", "team__name"]
 
 
 @admin.register(Player)

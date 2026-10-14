@@ -91,7 +91,18 @@ class TeamListView(APIView):
         if team_type in ("club", "national"):
             qs = qs.filter(team_type=team_type)
 
-        qs = qs.order_by("name")[:50]
+        competition_id = request.query_params.get("competition_id", "").strip()
+        if competition_id:
+            try:
+                comp_uuid = uuid.UUID(competition_id)
+                qs = qs.filter(
+                    competition_teams__competition_id=comp_uuid,
+                    competition_teams__is_active=True,
+                ).distinct()
+            except ValueError:
+                pass
+
+        qs = qs.order_by("name")[:100]
         return Response({
             "sport": slug,
             "teams": TeamListSerializer(qs, many=True).data,
@@ -153,6 +164,47 @@ class CompetitionDetailView(APIView):
     def get(self, request: Request, id: uuid.UUID) -> Response:
         comp = get_object_or_404(Competition, id=id, is_active=True)
         return Response(CompetitionDetailSerializer(comp).data)
+
+
+class CompetitionTeamListView(APIView):
+    """
+    GET /api/v1/sports/{slug}/competitions/{id}/teams/
+    Returns all active teams participating in the specified competition.
+    Supports query params:
+      - type: 'club' | 'national'
+      - q: search by team name
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request, slug: str, id: uuid.UUID) -> Response:
+        sport = get_object_or_404(Sport, slug=slug, is_active=True)
+        competition = get_object_or_404(Competition, id=id, sport=sport, is_active=True)
+
+        teams_qs = (
+            Team.objects.filter(
+                competition_teams__competition=competition,
+                competition_teams__is_active=True,
+                is_active=True,
+            )
+            .select_related("country", "sport")
+            .distinct()
+        )
+
+        team_type = request.query_params.get("type", "").strip()
+        if team_type in ("club", "national"):
+            teams_qs = teams_qs.filter(team_type=team_type)
+
+        q = request.query_params.get("q", "").strip()
+        if q:
+            teams_qs = teams_qs.filter(name__icontains=q)
+
+        teams_qs = teams_qs.order_by("name")
+        return Response({
+            "competition": CompetitionListSerializer(competition).data,
+            "teams": TeamListSerializer(teams_qs, many=True).data,
+            "count": teams_qs.count(),
+        })
 
 
 class PlayerListView(APIView):

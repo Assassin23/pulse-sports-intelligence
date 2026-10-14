@@ -3,7 +3,13 @@ Matches serializers.
 """
 from rest_framework import serializers
 
-from sports_platform.matches.models import Match, MatchEvent, MatchScore
+from sports_platform.matches.models import (
+    Match,
+    MatchEvent,
+    MatchOddsCurrent,
+    MatchOddsHistory,
+    MatchScore,
+)
 from sports_platform.sports.serializers import TeamListSerializer, CompetitionListSerializer, SportSerializer
 
 
@@ -62,3 +68,30 @@ class MatchScoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = MatchScore
         fields = ["score_data", "sequence_number", "updated_at"]
+
+
+class MatchOddsCurrentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MatchOddsCurrent
+        fields = [
+            "id",
+            "provider_name",
+            "market_type",
+            "bookmaker",
+            "odds_data",
+            "is_open",
+            "updated_at",
+        ]
+
+
+class MatchOddsHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MatchOddsHistory
+        fields = [
+            "id",
+            "provider_name",
+            "market_type",
+            "bookmaker",
+            "odds_data",
+            "recorded_at",
+        ]

@@ -167,3 +167,62 @@ class MatchEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} (seq {self.event_sequence}) in {self.match}"
+
+
+class MatchOddsCurrent(models.Model):
+    """
+    Current odds snapshot per match, provider, market, and bookmaker.
+    Fast durable record upserted by OddsProcessorConsumer.
+    Odds are strictly for informational analysis (no wagering/betting).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    match = models.ForeignKey(
+        Match, on_delete=models.CASCADE, related_name="odds_current"
+    )
+    provider_name = models.CharField(max_length=100, db_index=True)
+    market_type = models.CharField(max_length=50, db_index=True)
+    bookmaker = models.CharField(max_length=100)
+    odds_data = models.JSONField(default=dict)
+    is_open = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "match_odds_current"
+        unique_together = [("match", "provider_name", "market_type", "bookmaker")]
+        indexes = [
+            models.Index(fields=["match", "market_type"], name="idx_odds_curr_match_mkt"),
+        ]
+
+    def __str__(self):
+        return f"Current odds {self.market_type} ({self.bookmaker}) for {self.match_id}"
+
+
+class MatchOddsHistory(models.Model):
+    """
+    Append-only historical odds movements for time-series charts and line movement analysis.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    match = models.ForeignKey(
+        Match, on_delete=models.CASCADE, related_name="odds_history"
+    )
+    provider_name = models.CharField(max_length=100, db_index=True)
+    market_type = models.CharField(max_length=50, db_index=True)
+    bookmaker = models.CharField(max_length=100)
+    odds_data = models.JSONField(default=dict)
+    recorded_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "match_odds_history"
+        unique_together = [("match", "provider_name", "market_type", "recorded_at")]
+        indexes = [
+            models.Index(
+                fields=["match", "market_type", "recorded_at"],
+                name="idx_odds_hist_match_mkt_time",
+            ),
+        ]
+        ordering = ["recorded_at"]
+
+    def __str__(self):
+        return f"Historical odds {self.market_type} at {self.recorded_at} for {self.match_id}"

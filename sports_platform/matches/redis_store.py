@@ -250,6 +250,126 @@ class MatchRedisStore:
         """Shorten TTL to 6h after match completion."""
         self._redis.expire(self.score_key(match_id), SCORE_TTL_POST_MATCH)
 
+    # ── Odds Operations (Milestone 7) ──────────────────────────────────────────
+
+    @staticmethod
+    def odds_key(match_id: str, market_type: str) -> str:
+        return f"match:odds:{match_id}:{market_type}"
+
+    @staticmethod
+    def odds_history_key(match_id: str, market_type: str) -> str:
+        return f"match:odds:history:{match_id}:{market_type}"
+
+    def update_odds(
+        self,
+        match_id: str,
+        market_type: str,
+        provider: str,
+        bookmaker: str,
+        outcomes: List[Dict[str, Any]],
+        movement: Optional[List[Dict[str, Any]]] = None,
+        is_open: bool = True,
+    ) -> None:
+        """
+        Cache current odds snapshot and append to recent history.
+        Publishes odds_updated event to ws:match:{match_id}.
+        """
+        key = self.odds_key(match_id, market_type)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        odds_payload = {
+            "market_type": market_type,
+            "provider": provider,
+            "bookmaker": bookmaker,
+            "outcomes": json.dumps(outcomes),
+            "movement": json.dumps(movement or []),
+            "is_open": "1" if is_open else "0",
+            "updated_at": now_iso,
+        }
+
+        pipe = self._redis.pipeline()
+        pipe.hset(key, mapping=odds_payload)
+        pipe.expire(key, 14400)  # 4h TTL
+
+        # Append to historical list (last 10 items)
+        hist_key = self.odds_history_key(match_id, market_type)
+        hist_entry = json.dumps({
+            "outcomes": outcomes,
+            "recorded_at": now_iso,
+            "bookmaker": bookmaker,
+        })
+        pipe.lpush(hist_key, hist_entry)
+        pipe.ltrim(hist_key, 0, 9)
+        pipe.expire(hist_key, 14400)
+        pipe.execute()
+
+        # Publish to WebSocket
+        try:
+            pub_payload = json.dumps({
+                "type": "odds_updated",
+                "match_id": str(match_id),
+                "market_type": market_type,
+                "provider": provider,
+                "bookmaker": bookmaker,
+                "outcomes": outcomes,
+                "movement": movement or [],
+                "timestamp": now_iso,
+            })
+            self._redis.publish(f"ws:match:{match_id}", pub_payload)
+        except Exception as exc:
+            logger.warning("Failed to publish odds to Redis PubSub", extra={"error": str(exc)})
+
+    def get_odds(self, match_id: str, market_type: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get current odds for a specific market or scan for all markets of this match.
+        """
+        if market_type:
+            raw = self._redis.hgetall(self.odds_key(match_id, market_type))
+            if not raw:
+                return {}
+            return {
+                market_type: {
+                    "market_type": raw.get("market_type", market_type),
+                    "provider": raw.get("provider", ""),
+                    "bookmaker": raw.get("bookmaker", ""),
+                    "outcomes": json.loads(raw["outcomes"]) if "outcomes" in raw else [],
+                    "movement": json.loads(raw["movement"]) if "movement" in raw else [],
+                    "is_open": raw.get("is_open") == "1",
+                    "updated_at": raw.get("updated_at", ""),
+                }
+            }
+
+        # Scan for all match:odds:{match_id}:*
+        keys = self._redis.keys(f"match:odds:{match_id}:*")
+        results = {}
+        for key in keys:
+            if ":history:" in key:
+                continue
+            raw = self._redis.hgetall(key)
+            if raw and "market_type" in raw:
+                m_type = raw["market_type"]
+                results[m_type] = {
+                    "market_type": m_type,
+                    "provider": raw.get("provider", ""),
+                    "bookmaker": raw.get("bookmaker", ""),
+                    "outcomes": json.loads(raw["outcomes"]) if "outcomes" in raw else [],
+                    "movement": json.loads(raw["movement"]) if "movement" in raw else [],
+                    "is_open": raw.get("is_open") == "1",
+                    "updated_at": raw.get("updated_at", ""),
+                }
+        return results
+
+    def get_odds_history(self, match_id: str, market_type: str, limit: int = 10) -> List[dict]:
+        """Return recent odds movements from Redis list."""
+        key = self.odds_history_key(match_id, market_type)
+        items = self._redis.lrange(key, 0, limit - 1)
+        history = []
+        for item in items:
+            try:
+                history.append(json.loads(item))
+            except Exception:
+                pass
+        return history
+
 
 # ── Singleton ─────────────────────────────────────────────────────────────────
 

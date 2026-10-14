@@ -75,6 +75,16 @@ class PlayerFactory(factory.django.DjangoModelFactory):
     is_active = True
 
 
+class CompetitionTeamFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "sports.CompetitionTeam"
+
+    competition = factory.SubFactory(CompetitionFactory)
+    team = factory.SubFactory(TeamFactory)
+    season = "2025-26"
+    is_active = True
+
+
 class MatchFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "matches.Match"

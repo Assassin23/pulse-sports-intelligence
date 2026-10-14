@@ -133,6 +133,24 @@ Each milestone produces a working, deployable increment. Later milestones build 
 
 ---
 
+## Milestone 6 Post-Processing: Preferences & Entity Taxonomy Overhaul
+
+**Duration:** ~1 week  
+**Goal:** Restructure the preferences UI and entity taxonomy for Football, Cricket, and Tennis, enabling Club vs. Country filtering, dynamic League-to-Team rosters, and tournament/player flows.  
+**Specification:** [docs/milestone-6-post-processing-preferences-ui.md](file:///d:/WorkSpace/myne/Pulse/sports-intelligence-platform/docs/milestone-6-post-processing-preferences-ui.md)
+
+### Deliverables
+- ✅ `CompetitionTeam` M2M database relation and migration
+- ✅ Enriched seed data for Cricket (IPL + National), Football (Premier League, UCL + National), Tennis (Grand Slams + ATP/WTA)
+- ✅ `GET /api/v1/sports/{slug}/competitions/{id}/teams/` API endpoint
+- ✅ Hierarchical frontend preferences workspace with dual-mode (By Competition vs By Team Type)
+- ✅ Tailored Tennis preferences UI (Grand Slams & Top Players)
+- ✅ Personal feed & WebSocket feed alignment with granular entity followings
+
+**Dependencies:** 🔴 Milestone 1 (Preferences), Milestone 2 (Sports Reference Data)
+
+---
+
 ## Milestone 7: Odds Ingestion
 
 **Duration:** ~1 week  

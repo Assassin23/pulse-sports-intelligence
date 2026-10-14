@@ -2,6 +2,7 @@
 Local development settings.
 Reads from .env file in project root.
 """
+import os
 from pathlib import Path
 
 import environ
@@ -12,13 +13,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
 
-# Load .env file if it exists (local dev)
-env_file = BASE_DIR / ".env"
-if env_file.exists():
-    environ.Env.read_env(str(env_file))
-else:
-    # Fall back to .env.example values for first-time setup
-    environ.Env.read_env(str(BASE_DIR / ".env.example"))
+# Only re-read .env if running on host machine outside container
+if not (os.environ.get("IN_DOCKER") == "true" or Path("/.dockerenv").exists()):
+    env_file = BASE_DIR / ".env"
+    if env_file.exists():
+        environ.Env.read_env(str(env_file), overwrite=True)
+    else:
+        environ.Env.read_env(str(BASE_DIR / ".env.example"), overwrite=True)
 
 DEBUG = True
 

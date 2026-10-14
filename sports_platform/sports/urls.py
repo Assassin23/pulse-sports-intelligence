@@ -6,6 +6,7 @@ from django.urls import path
 from sports_platform.sports.views import (
     CompetitionDetailView,
     CompetitionListView,
+    CompetitionTeamListView,
     CountryListView,
     PlayerDetailView,
     PlayerListView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("<slug:slug>/", SportDetailView.as_view(), name="sport-detail"),
     path("<slug:slug>/teams/", TeamListView.as_view(), name="team-list"),
     path("<slug:slug>/competitions/", CompetitionListView.as_view(), name="competition-list"),
+    path("<slug:slug>/competitions/<uuid:id>/teams/", CompetitionTeamListView.as_view(), name="competition-team-list"),
     path("<slug:slug>/players/", PlayerListView.as_view(), name="player-list"),
     path("teams/<uuid:id>/", TeamDetailView.as_view(), name="team-detail"),
     path("competitions/<uuid:id>/", CompetitionDetailView.as_view(), name="competition-detail"),

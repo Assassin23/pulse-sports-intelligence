@@ -17,12 +17,19 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from sports_platform.matches.models import Match, MatchEvent
+from sports_platform.matches.models import (
+    Match,
+    MatchEvent,
+    MatchOddsCurrent,
+    MatchOddsHistory,
+)
 from sports_platform.matches.redis_store import get_match_store
 from sports_platform.matches.serializers import (
     MatchDetailSerializer,
     MatchEventSerializer,
     MatchListSerializer,
+    MatchOddsCurrentSerializer,
+    MatchOddsHistorySerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -164,6 +171,12 @@ class LiveMatchesView(APIView):
                     age = int(time.time()) - updated_at
                     freshness_times.append(age)
                     match_data["data_freshness_seconds"] = age
+
+            # Attach odds if cached in Redis
+            cached_odds = store.get_odds(str(match.id))
+            if cached_odds:
+                match_data["odds"] = cached_odds
+
             result.append(match_data)
 
         avg_freshness = int(sum(freshness_times) / len(freshness_times)) if freshness_times else None
@@ -172,6 +185,7 @@ class LiveMatchesView(APIView):
             "matches": result,
             "count": len(result),
             "avg_freshness_seconds": avg_freshness,
+            "odds_disclaimer": "Odds are for informational and statistical analysis only. No betting or wagering capabilities.",
         })
 
 
@@ -183,6 +197,7 @@ class MatchDetailView(APIView):
       - Live score (Redis fast path, DB fallback)
       - Recent events (Redis recent sorted set, up to 20)
       - data_freshness_seconds: age of score data in seconds
+      - Odds snapshot with regulatory informational disclaimer
     """
 
     permission_classes = [AllowAny]
@@ -216,14 +231,89 @@ class MatchDetailView(APIView):
         # ── Recent events (Redis) ─────────────────────────────────────────────
         recent_events = store.get_recent_events(str(match.id), limit=20)
 
+        # ── Odds snapshot (Redis → DB fallback) ───────────────────────────────
+        odds_data = store.get_odds(str(match.id))
+        if not odds_data:
+            db_odds = MatchOddsCurrent.objects.filter(match=match, is_open=True)
+            if db_odds.exists():
+                odds_data = {
+                    item.market_type: {
+                        "market_type": item.market_type,
+                        "provider": item.provider_name,
+                        "bookmaker": item.bookmaker,
+                        "outcomes": item.odds_data.get("outcomes", []),
+                        "movement": item.odds_data.get("movement", []),
+                        "updated_at": item.updated_at.isoformat(),
+                    }
+                    for item in db_odds
+                }
+
         response_data = MatchDetailSerializer(match).data
         response_data.update({
             "score": score_data,
             "score_source": score_source,
             "recent_events": recent_events,
             "data_freshness_seconds": data_freshness_seconds,
+            "odds": odds_data or {},
+            "odds_disclaimer": "Odds are for informational and statistical analysis only. No betting or wagering capabilities.",
         })
         return Response(response_data)
+
+
+class MatchOddsView(APIView):
+    """
+    GET /api/v1/matches/{id}/odds/
+    Returns current and historical odds for the specified match.
+    Query params:
+      market — optional filter by market type (e.g. 'match_winner')
+      from   — optional ISO datetime string to filter history
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request, id: str) -> Response:
+        match = get_object_or_404(Match, id=id)
+        market_param = request.query_params.get("market", "").strip()
+        from_param = request.query_params.get("from", "").strip()
+        store = get_match_store()
+
+        current_odds = store.get_odds(str(match.id), market_param if market_param else None)
+        if not current_odds:
+            qs = MatchOddsCurrent.objects.filter(match=match, is_open=True)
+            if market_param:
+                qs = qs.filter(market_type=market_param)
+            current_odds = {
+                item.market_type: {
+                    "market_type": item.market_type,
+                    "provider": item.provider_name,
+                    "bookmaker": item.bookmaker,
+                    "outcomes": item.odds_data.get("outcomes", []),
+                    "movement": item.odds_data.get("movement", []),
+                    "updated_at": item.updated_at.isoformat(),
+                }
+                for item in qs
+            }
+
+        # Query history from PostgreSQL
+        hist_qs = MatchOddsHistory.objects.filter(match=match)
+        if market_param:
+            hist_qs = hist_qs.filter(market_type=market_param)
+        if from_param:
+            try:
+                from_dt = datetime.fromisoformat(from_param.replace("Z", "+00:00"))
+                hist_qs = hist_qs.filter(recorded_at__gte=from_dt)
+            except ValueError:
+                pass
+        hist_records = hist_qs.order_by("recorded_at")[:50]
+        history_data = MatchOddsHistorySerializer(hist_records, many=True).data
+
+        return Response({
+            "match_id": str(match.id),
+            "market": market_param or "all",
+            "odds": current_odds,
+            "history": history_data,
+            "odds_disclaimer": "Odds are for informational and statistical analysis only. No betting or wagering capabilities.",
+        })
 
 
 class MatchEventsView(APIView):
